@@ -71,7 +71,7 @@ func main() {
 		}
 
 		switch os.Args[1] {
-		case "ids":
+		case "from_export":
 			err = jobs[0].Run(ctx)
 			if err != nil {
 				log.Fatalf("failed to run job: %v", err)
@@ -83,6 +83,11 @@ func main() {
 			}
 		case "activity_sync":
 			err = jobs[2].Run(ctx)
+			if err != nil {
+				log.Fatalf("failed to run job: %v", err)
+			}
+		case "activity_original":
+			err = jobs[3].Run(ctx)
 			if err != nil {
 				log.Fatalf("failed to run job: %v", err)
 			}

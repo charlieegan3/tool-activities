@@ -23,6 +23,9 @@ type Activities struct {
 	stravaClientID     string
 	stravaClientSecret string
 	stravaRefreshToken string
+	host               string
+	email              string
+	password           string
 
 	googleServiceAccountJSON string
 	googleProject            string
@@ -60,6 +63,24 @@ func (a *Activities) SetConfig(config map[string]any) error {
 
 	path = "strava.client_id"
 	a.stravaClientID, ok = a.config.Path(path).Data().(string)
+	if !ok {
+		return fmt.Errorf("missing required config path: %s", path)
+	}
+
+	path = "strava.host"
+	a.host, ok = a.config.Path(path).Data().(string)
+	if !ok {
+		return fmt.Errorf("missing required config path: %s", path)
+	}
+
+	path = "strava.email"
+	a.email, ok = a.config.Path(path).Data().(string)
+	if !ok {
+		return fmt.Errorf("missing required config path: %s", path)
+	}
+
+	path = "strava.password"
+	a.password, ok = a.config.Path(path).Data().(string)
 	if !ok {
 		return fmt.Errorf("missing required config path: %s", path)
 	}
@@ -105,7 +126,11 @@ func (a *Activities) SetConfig(config map[string]any) error {
 
 func (a *Activities) Jobs() ([]apis.Job, error) {
 	return []apis.Job{
-		&manual.FromExport{DB: a.db},
+		&manual.FromExport{
+			DB:                    a.db,
+			GoogleCredentialsJSON: a.googleServiceAccountJSON,
+			GoogleBucketName:      a.googleBucketName,
+		},
 		&jobs.ActivityPoll{
 			DB:                 a.db,
 			StravaClientID:     a.stravaClientID,
@@ -118,6 +143,18 @@ func (a *Activities) Jobs() ([]apis.Job, error) {
 			StravaClientID:        a.stravaClientID,
 			StravaClientSecret:    a.stravaClientSecret,
 			StravaRefreshToken:    a.stravaRefreshToken,
+			ScheduleOverride:      a.scheduleActivityPoll,
+			GoogleCredentialsJSON: a.googleServiceAccountJSON,
+			GoogleBucketName:      a.googleBucketName,
+		},
+		&jobs.ActivityOriginal{
+			DB:                    a.db,
+			StravaClientID:        a.stravaClientID,
+			StravaClientSecret:    a.stravaClientSecret,
+			StravaRefreshToken:    a.stravaRefreshToken,
+			Host:                  a.host,
+			Email:                 a.email,
+			Password:              a.password,
 			ScheduleOverride:      a.scheduleActivityPoll,
 			GoogleCredentialsJSON: a.googleServiceAccountJSON,
 			GoogleBucketName:      a.googleBucketName,
