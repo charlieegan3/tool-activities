@@ -4,10 +4,8 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
-	"github.com/charlieegan3/tool-activities/pkg/tool/jobs"
-	"github.com/charlieegan3/tool-activities/pkg/tool/jobs/manual"
-
 	"github.com/Jeffail/gabs/v2"
+	"github.com/charlieegan3/tool-activities/pkg/tool/jobs"
 	"github.com/charlieegan3/toolbelt/pkg/apis"
 	"github.com/gorilla/mux"
 )
@@ -31,7 +29,9 @@ type Activities struct {
 	googleProject            string
 	googleBucketName         string
 
-	scheduleActivityPoll string
+	scheduleActivityPoll     string
+	scheduleActivitySync     string
+	scheduleActivityOriginal string
 }
 
 func (a *Activities) Name() string {
@@ -121,16 +121,27 @@ func (a *Activities) SetConfig(config map[string]any) error {
 		return fmt.Errorf("missing required config path: %s", path)
 	}
 
+	path = "jobs.activity_poll.schedule"
+	a.scheduleActivityPoll, ok = a.config.Path(path).Data().(string)
+	if !ok {
+		return fmt.Errorf("missing required config path: %s", path)
+	}
+	path = "jobs.activity_sync.schedule"
+	a.scheduleActivitySync, ok = a.config.Path(path).Data().(string)
+	if !ok {
+		return fmt.Errorf("missing required config path: %s", path)
+	}
+	path = "jobs.activity_original.schedule"
+	a.scheduleActivityOriginal, ok = a.config.Path(path).Data().(string)
+	if !ok {
+		return fmt.Errorf("missing required config path: %s", path)
+	}
+
 	return nil
 }
 
 func (a *Activities) Jobs() ([]apis.Job, error) {
 	return []apis.Job{
-		&manual.FromExport{
-			DB:                    a.db,
-			GoogleCredentialsJSON: a.googleServiceAccountJSON,
-			GoogleBucketName:      a.googleBucketName,
-		},
 		&jobs.ActivityPoll{
 			DB:                 a.db,
 			StravaClientID:     a.stravaClientID,
@@ -143,9 +154,9 @@ func (a *Activities) Jobs() ([]apis.Job, error) {
 			StravaClientID:        a.stravaClientID,
 			StravaClientSecret:    a.stravaClientSecret,
 			StravaRefreshToken:    a.stravaRefreshToken,
-			ScheduleOverride:      a.scheduleActivityPoll,
 			GoogleCredentialsJSON: a.googleServiceAccountJSON,
 			GoogleBucketName:      a.googleBucketName,
+			ScheduleOverride:      a.scheduleActivitySync,
 		},
 		&jobs.ActivityOriginal{
 			DB:                    a.db,
@@ -155,9 +166,9 @@ func (a *Activities) Jobs() ([]apis.Job, error) {
 			Host:                  a.host,
 			Email:                 a.email,
 			Password:              a.password,
-			ScheduleOverride:      a.scheduleActivityPoll,
 			GoogleCredentialsJSON: a.googleServiceAccountJSON,
 			GoogleBucketName:      a.googleBucketName,
+			ScheduleOverride:      a.scheduleActivityOriginal,
 		},
 	}, nil
 }
